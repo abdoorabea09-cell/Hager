@@ -23,7 +23,6 @@
         #rotate-overlay img { width: 80px; margin-bottom: 20px; animation: rotateAnim 2s infinite ease-in-out; }
         @keyframes rotateAnim { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-90deg); } }
 
-        /* إظهار التنبيه فقط في الوضع العمودي */
         @media screen and (orientation: portrait) {
             #rotate-overlay { display: flex; }
             #game-container { display: none; }
@@ -54,13 +53,16 @@
             transform: translate(-50%, -50%);
         } 
 
+        /* تعديل حجم وموقع الشخصيات */
         .character-sprite {
             position: absolute; z-index: 2; display: none;
             left: 50%; transform: translateX(-50%);
         }
-        #hager { height: 70dvh; bottom: 5dvh; left: 55%; }
-        #judge { height: 25dvh; bottom: 43dvh; left: 51%; }
-        #accused { height: 70dvh; bottom: 5dvh; left: 50%; }
+        /* هاجر والمتهم كبار وبملء الشاشة تقريباً */
+        #hager { height: 85dvh; bottom: 0; left: 55%; }
+        #accused { height: 85dvh; bottom: 0; left: 50%; }
+        /* القاضي مكبر قليلاً ليتناسب مع المنصة */
+        #judge { height: 32dvh; bottom: 41dvh; left: 51%; }
 
         .dialogue-box {
             position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
