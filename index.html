@@ -13,34 +13,44 @@
             font-family: 'DotGothic16', sans-serif; touch-action: manipulation;
         }
 
+        /* شاشة التنبيه لتدوير الجهاز */
+        #rotate-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; display: none; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 1000; color: white;
+            text-align: center;
+        }
+        #rotate-overlay img { width: 80px; margin-bottom: 20px; animation: rotateAnim 2s infinite ease-in-out; }
+        @keyframes rotateAnim { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-90deg); } }
+
+        /* إظهار التنبيه فقط في الوضع العمودي */
+        @media screen and (orientation: portrait) {
+            #rotate-overlay { display: flex; }
+            #game-container { display: none; }
+        }
+
         #game-container {
             position: relative; width: 100%; height: 100dvh;
             background-size: cover; background-position: center;
             image-rendering: pixelated; overflow: hidden;
-            /* توسيط محتوى الحاوية */
             display: flex; justify-content: center; align-items: center;
         }
 
-        /* المشاهد */
         .scene-court { background-image: url('courtroom.png'); background-size: cover; width: 100%; height: 100%; }
         .scene-judge { background-image: url('judgedesk.png'); background-size: cover; width: 100%; height: 100%; }
         
-        /* مشهد الكيكة المربعة في المنتصف */
         .scene-cake { 
             background-image: url('cake.png') !important; 
             background-size: contain !important;
             background-repeat: no-repeat !important;
             background-position: center !important;
-            /* الأبعاد المربعة المطلوبة */
             width: 782px !important;
             height: 768px !important;
-            /* لضمان التناسب مع الشاشات الصغيرة */
             max-width: 95vw !important;
             max-height: 85dvh !important;
             margin: auto;
             position: absolute;
-            top: 50%;
-            left: 50%;
+            top: 50%; left: 50%;
             transform: translate(-50%, -50%);
         } 
 
@@ -54,7 +64,7 @@
 
         .dialogue-box {
             position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
-            width: 96%; height: 30dvh; background: rgba(0, 0, 25, 0.95);
+            width: 96%; height: 32dvh; background: rgba(0, 0, 25, 0.95);
             border: 2px solid #fff; padding: 15px; box-sizing: border-box; z-index: 10;
         }
 
@@ -89,6 +99,11 @@
 </head>
 <body>
 
+    <div id="rotate-overlay">
+        <img src="rotate.png" alt="Rotate">
+        <p>يرجى تدوير الهاتف للوضع العرضي <br> لبدء المحاكمة</p>
+    </div>
+
     <div id="game-container" class="scene-judge">
         <div id="objection-overlay">OBJECTION!</div>
         
@@ -118,7 +133,7 @@
             { name: "القاضي", scene: "scene-judge", text: "هدوء في القاعة! المحكمة الآن تنظر في أخطر قضية هذا الشهر...", char: "judge", img: "judge.png" },
             { name: "القاضي", scene: "scene-judge", text: "قضية اختفاء كعكة عيد ميلاد المحامية هاجر.", char: "judge", img: "judge.png" },
             { name: "هاجر", scene: "scene-court", text: "سيدي القاضي، الأدلة واضحة. المتهم كان آخر من شوهد قرب الثلاجة.", char: "hager", img: "hager.png" },
-            { name: "المتهم", scene: "scene-court", text: "كنت فقط أتأكد أن الكيكة.. أعني الثلاجة.. تعمل جيدا!", char: "accused", img: "accused.png" },
+            { name: "المتهم", scene: "scene-court", text: "اعتراض! كنت فقط أتأكد أن الكيكة.. أعني الثلاجة.. تعمل جيداً!", char: "accused", img: "accused.png" },
             { name: "هاجر", scene: "scene-court", text: "كاذب! الدليل الذي يثبت جريمتك هو...", char: "hager", img: "hager_objection.png", isObjection: true, showChoices: true }
         ];
 
@@ -151,22 +166,16 @@
             if (currentIdx < dialogue.length) {
                 const step = dialogue[currentIdx];
                 const container = document.getElementById('game-container');
-                
-                // تغيير المشهد فوراً
                 container.className = step.scene;
                 
-                // الموسيقى
                 if (step.changeMusic) {
                     bgMusic.pause();
                     happyMusic.currentTime = 0;
                     happyMusic.play();
                     happyMusic.volume = 0.5;
                 }
-                if (step.scene === 'scene-cake') {
-                    createConfetti();
-                }
+                if (step.scene === 'scene-cake') { createConfetti(); }
 
-                // إخفاء الشخصيات
                 document.querySelectorAll('.character-sprite').forEach(img => img.style.display = 'none');
                 if(step.char) {
                     const charImg = document.getElementById(step.char);
@@ -221,10 +230,7 @@
                 c.style.top = '-10px';
                 c.style.backgroundColor = ['#ff0','#f0f','#0ff','#0f0','#fff'].sort(() => 0.5 - Math.random())[0];
                 document.body.appendChild(c);
-                c.animate([
-                    { transform: 'translateY(0) rotate(0)' },
-                    { transform: `translateY(100vh) rotate(${Math.random()*360}deg)` }
-                ], { duration: 2000 + Math.random()*2000, iterations: Infinity });
+                c.animate([{ transform: 'translateY(0) rotate(0)' }, { transform: `translateY(100vh) rotate(${Math.random()*360}deg)` }], { duration: 2000 + Math.random()*2000, iterations: Infinity });
             }
         }
 
