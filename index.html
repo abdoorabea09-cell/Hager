@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>قضية هاجر | Ace Attorney Edition</title>
+    <title>قضية كعكة هاجر | Ace Attorney</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap');
 
@@ -12,223 +12,194 @@
             background-color: #000;
             display: flex; justify-content: center; align-items: center;
             overflow: hidden; font-family: 'DotGothic16', sans-serif;
-            /* منع السحب والتحديد في الموبايل */
-            touch-action: manipulation;
-            user-select: none;
+            touch-action: manipulation; user-select: none;
         }
 
+        /* شاشة التدوير */
+        #rotate-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; display: none; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 1000; color: white;
+            text-align: center;
+        }
+        #rotate-overlay img { width: 120px; margin-bottom: 15px; animation: rotateAnim 2s infinite ease-in-out; }
+        @keyframes rotateAnim { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-90deg); } }
+
+        @media screen and (orientation: portrait) {
+            #rotate-overlay { display: flex; }
+            #game-container { display: none; }
+        }
+
+        /* حاوية اللعبة بالأبعاد اللي طلبتها */
         #game-container {
-            position: relative;
-            /* تغيير الأبعاد لتناسب الموبايل والديسكتوب تلقائياً */
-            width: 100vw;
-            height: 56.25vw; /* نسبة 16:9 */
-            max-width: 1000px;
-            max-height: 562px;
-            background-size: cover;
-            background-position: center;
-            image-rendering: pixelated;
-            border: 2px solid #333;
-            overflow: hidden;
-        }
-
-        /* تعديل للموبايل الطولي (Portrait) */
-        @media (max-aspect-ratio: 16/9) {
-            #game-container {
-                width: 100vw;
-                height: 56.25vw;
-            }
+            position: relative; width: 100vw; height: 100vh;
+            max-width: 177.78vh; max-height: 56.25vw;
+            background-size: 100% 100%; image-rendering: pixelated; overflow: hidden;
         }
 
         .scene-court { background-image: url('courtroom.png'); }
         .scene-judge { background-image: url('judgedesk.png'); }
 
+        /* رجوع مقاسات الشخصيات الأصلية */
         .character-sprite {
-            position: absolute;
-            z-index: 2;
-            image-rendering: pixelated;
-            display: none;
-            height: 70%; /* نسبة مئوية للطول ليتحرك مع الحاوية */
-            bottom: 15%;
-            left: 50%;
+            position: absolute; z-index: 2; image-rendering: pixelated; display: none;
             transform: translateX(-50%);
         }
+        #hager { height: 70%; bottom: 5%; left: 55%; }
+        #judge { height: 25%; bottom: 43%; left: 51%; }
+        #accused { height: 70%; bottom: 5%; left: 50%; }
 
-        #hager {
-            height: 75%;
-            bottom: 10%;
-            left: 55%;
-        }
-
-        #judge {
-            height: 25%;
-            bottom: 43%;
-            left: 51%;
-        }
-
-        .judge-large {
-            height: 28% !important;
-            bottom: 42% !important;
-        }
-
+        /* مربع النص بالعرض الكبير (96%) */
         .dialogue-box {
-            position: absolute;
-            bottom: 5px; left: 50%;
-            transform: translateX(-50%);
-            width: 95%; height: 30%;
-            background: rgba(0, 0, 20, 0.95);
-            border: 2px solid #fff;
-            padding: 10px 15px;
-            box-sizing: border-box;
-            z-index: 10;
+            position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+            width: 96%; height: 30%; background: rgba(0, 0, 20, 0.95);
+            border: 3px solid #fff; padding: 12px 25px; box-sizing: border-box;
+            z-index: 10; cursor: pointer;
         }
 
         .name-label {
-            position: absolute;
-            top: -15px; right: 20px;
-            background: #d32f2f; color: white;
-            padding: 3px 15px; font-size: 16px;
-            border: 2px solid #fff;
+            position: absolute; top: -18px; right: 30px;
+            background: #d32f2f; color: white; padding: 4px 20px;
+            font-size: clamp(14px, 3vw, 22px); border: 2px solid #fff;
         }
 
-        .text-line {
-            color: white; 
-            font-size: clamp(16px, 4vw, 22px); /* خط مرن يصغر مع الشاشة */
-            line-height: 1.3;
-            text-align: right;
-            margin-top: 5px;
+        .text-line { color: white; font-size: clamp(18px, 4vw, 26px); line-height: 1.5; text-align: right; }
+
+        /* نظام الخيارات */
+        #choices-container {
+            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
+            display: none; flex-direction: column; gap: 10px; z-index: 100; width: 70%;
+        }
+        .choice-btn {
+            background: rgba(211, 47, 47, 0.95); color: white; border: 2px solid #fff;
+            padding: 12px; font-family: 'DotGothic16', sans-serif; cursor: pointer;
+            font-size: clamp(16px, 3vw, 22px); text-align: center;
         }
 
         #objection-overlay {
-            position: absolute;
-            top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0);
-            font-size: clamp(40px, 15vw, 80px); 
-            color: red; font-weight: bold;
-            -webkit-text-stroke: 1px white; z-index: 100;
-            transition: transform 0.2s; pointer-events: none;
+            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0);
+            font-size: clamp(50px, 12vw, 100px); color: red; font-weight: bold;
+            -webkit-text-stroke: 2px white; z-index: 110; pointer-events: none;
+            transition: transform 0.2s;
         }
 
         .shake { animation: shakeScreen 0.4s; }
-        @keyframes shakeScreen {
-            0%, 100% { transform: translate(0,0); }
-            25% { transform: translate(3px, 3px); }
-            50% { transform: translate(-3px, -3px); }
-        }
+        @keyframes shakeScreen { 0%, 100% { transform: translate(0,0); } 25% { transform: translate(5px, 5px); } 50% { transform: translate(-5px, -5px); } }
     </style>
 </head>
 <body>
 
-<div id="game-container" class="scene-judge">
-    <div id="objection-overlay">OBJECTION!</div>
-    
-    <img src="hager.png" id="hager" class="character-sprite" alt="Hager">
-    <img src="judge.png" id="judge" class="character-sprite" alt="Judge">
-
-    <div class="dialogue-box" id="next-btn">
-        <div class="name-label" id="speaker-name">المحكمة</div>
-        <div class="text-line" id="dialogue-text">انقر لبدء المحاكمة...</div>
+    <div id="rotate-overlay">
+        <img src="rotate.png" alt="Rotate">
+        <p>اقلب الموبايل بالعرض لبدء المحاكمة!</p>
     </div>
-</div>
 
-<audio id="bg-music" src="trial.mp3" loop></audio>
-<audio id="sfx-blip" src="blip.mp3"></audio>
-<audio id="sfx-slam" src="slam.mp3"></audio>
+    <div id="game-container" class="scene-judge">
+        <div id="objection-overlay">OBJECTION!</div>
+        
+        <div id="choices-container">
+            <button class="choice-btn" onclick="makeChoice(1)">فتشوا ملابسه! أكيد الكيكة هناك!</button>
+            <button class="choice-btn" onclick="makeChoice(2)">الثلاجة فاضية تماماً.. وده مستحيل!</button>
+            <button class="choice-btn" onclick="makeChoice(3)">بوق المتهم فيه أثر كريمة بيضاء!</button>
+        </div>
 
-<script>
-    const dialogue = [
-        { name: "القاضي", scene: "scene-judge", text: "هدوء في القاعة! لنبدأ جلسة 15 مارس.", image: "judge.png" },
-        { name: "القاضي", scene: "scene-judge", text: "التهمة الموجهة اليوم هي: كبرنا سنة كاملة!", image: "judge.png" },
-        { name: "هاجر", scene: "scene-court", text: "اعتراض يا سيدي القاضي!!", image: "hager_objection.png", isObjection: true },
-        { name: "هاجر", scene: "scene-court", text: "الوقت لم يمر هباءً، لقد تخرجنا وأصبحنا محامين، واليوم نحتفل أيضاً!", image: "hager.png" },
-        { name: "القاضي", scene: "scene-judge", text: "مرافعة مقنعة.. وبما أننا في رمضان، الحكم سيكون سعيداً.", image: "judge.png" },
-        { name: "القاضي", scene: "scene-judge", text: "حكمت المحكمة بالبراءة!", image: "judge_hammer.png", hammer: true },
-        { name: "هاجر", scene: "scene-court", text: "شكراً يا سيدي القاضي.. رمضان كريم للجميع! ✨", image: "hager.png" }
-    ];
+        <img src="hager.png" id="hager" class="character-sprite">
+        <img src="judge.png" id="judge" class="character-sprite">
+        <img src="accused.png" id="accused" class="character-sprite">
 
-    let currentIdx = -1;
-    let isTyping = false;
-    let musicStarted = false;
+        <div class="dialogue-box" id="next-btn">
+            <div class="name-label" id="speaker-name">المحكمة</div>
+            <div class="text-line" id="dialogue-text">انقر لبدء التحقيق...</div>
+        </div>
+    </div>
 
-    const textTarget = document.getElementById('dialogue-text');
-    const nameTarget = document.getElementById('speaker-name');
-    const hagerImg = document.getElementById('hager');
-    const judgeImg = document.getElementById('judge');
-    const container = document.getElementById('game-container');
-    const objection = document.getElementById('objection-overlay');
-    
-    const bgMusic = document.getElementById('bg-music');
-    bgMusic.volume = 0.3;
-    const sfxBlip = document.getElementById('sfx-blip');
-    const sfxSlam = document.getElementById('sfx-slam');
+    <audio id="bg-music" src="trial.mp3" loop></audio>
+    <audio id="sfx-blip" src="blip.mp3"></audio>
+    <audio id="sfx-slam" src="slam.mp3"></audio>
 
-    function typeWriter(text) {
-        isTyping = true;
-        textTarget.innerHTML = "";
-        let i = 0;
-        let interval = setInterval(() => {
-            textTarget.innerHTML += text.charAt(i);
-            if (i % 2 === 0) {
-                sfxBlip.currentTime = 0;
-                sfxBlip.play().catch(e => {});
-            }
-            i++;
-            if (i >= text.length) {
-                clearInterval(interval);
-                isTyping = false;
-            }
-        }, 50);
-    }
+    <script>
+        const dialogue = [
+            { name: "القاضي", scene: "scene-judge", text: "هدوء! المحكمة تنظر في قضية اختفاء كعكة هاجر.", char: "judge", img: "judge.png" },
+            { name: "هاجر", scene: "scene-court", text: "سيدي القاضي! المتهم كان واقفاً بجانب الثلاجة في الظلام!", char: "hager", img: "hager.png" },
+            { name: "المتهم", scene: "scene-court", text: "اعتراض! كنت فقط أتأكد أن الثلاجة تبرد بشكل جيد!", char: "accused", img: "accused.png" },
+            { name: "هاجر", scene: "scene-court", text: "كاذب! الدليل القاطع على جريمتك هو...", char: "hager", img: "hager_objection.png", isObjection: true, showChoices: true }
+        ];
 
-    document.getElementById('next-btn').addEventListener('click', () => {
-        if (!musicStarted) {
-            bgMusic.play().catch(e => console.log("الصوت مفعل"));
-            musicStarted = true;
+        let currentIdx = -1;
+        let isTyping = false;
+        let musicStarted = false;
+
+        const textTarget = document.getElementById('dialogue-text');
+        const sfxBlip = document.getElementById('sfx-blip');
+        const sfxSlam = document.getElementById('sfx-slam');
+        const bgMusic = document.getElementById('bg-music');
+
+        function typeWriter(text, callback) {
+            isTyping = true;
+            textTarget.innerHTML = "";
+            let i = 0;
+            let interval = setInterval(() => {
+                textTarget.innerHTML += text.charAt(i);
+                if (i % 2 === 0) { sfxBlip.currentTime = 0; sfxBlip.play().catch(e=>{}); }
+                i++;
+                if (i >= text.length) { clearInterval(interval); isTyping = false; if (callback) callback(); }
+            }, 50);
         }
 
-        if (isTyping) return;
+        function showStep() {
+            if (isTyping) return;
+            currentIdx++;
+            if (currentIdx < dialogue.length) {
+                const step = dialogue[currentIdx];
+                const container = document.getElementById('game-container');
+                container.className = step.scene;
+                
+                document.querySelectorAll('.character-sprite').forEach(img => img.style.display = 'none');
+                const charImg = document.getElementById(step.char);
+                charImg.style.display = "block";
+                charImg.src = step.img;
 
-        currentIdx++;
-        if (currentIdx < dialogue.length) {
-            const step = dialogue[currentIdx];
-            container.className = step.scene;
-            
-            if (step.scene === "scene-court") {
-                hagerImg.style.display = "block";
-                judgeImg.style.display = "none";
-                hagerImg.src = step.image;
-            } else {
-                hagerImg.style.display = "none";
-                judgeImg.style.display = "block";
-                judgeImg.src = step.image;
-
-                if (step.image === "judge_hammer.png") {
-                    judgeImg.classList.add('judge-large');
-                } else {
-                    judgeImg.classList.remove('judge-large');
+                if (step.isObjection) {
+                    const obj = document.getElementById('objection-overlay');
+                    obj.style.transform = "translate(-50%, -50%) scale(1.2)";
+                    container.classList.add('shake');
+                    setTimeout(() => { obj.style.transform = "translate(-50%, -50%) scale(0)"; container.classList.remove('shake'); }, 600);
                 }
-            }
 
-            if (step.isObjection) {
-                objection.style.transform = "translate(-50%, -50%) scale(1.1)";
-                container.classList.add('shake');
-                setTimeout(() => {
-                    objection.style.transform = "translate(-50%, -50%) scale(0)";
-                    container.classList.remove('shake');
-                }, 600);
-            }
+                if (step.hammer) {
+                    sfxSlam.currentTime = 0;
+                    sfxSlam.play();
+                    container.classList.add('shake');
+                    setTimeout(() => container.classList.remove('shake'), 400);
+                }
 
-            if (step.hammer) {
-                sfxSlam.play();
-                container.classList.add('shake');
-                setTimeout(() => container.classList.remove('shake'), 400);
+                document.getElementById('speaker-name').innerText = step.name;
+                typeWriter(step.text, () => {
+                    if (step.showChoices) document.getElementById('choices-container').style.display = 'flex';
+                });
             }
-
-            nameTarget.innerText = step.name;
-            typeWriter(step.text);
-        } else {
-            textTarget.innerHTML = "انتهت الجلسة. كل سنة وانتي طيبة يا هاجر! ❤️";
         }
-    });
-</script>
 
+        function makeChoice(num) {
+            document.getElementById('choices-container').style.display = 'none';
+            let res = num === 1 ? "فتشوا ملابسه! الكعكة لا يمكن أن تتبخر!" : 
+                      num === 2 ? "الثلاجة فارغة تماماً، وهذا دليل على الجريمة!" : 
+                      "انظروا إلى فمه! بقايا الكريمة تفضحه!";
+
+            dialogue.push(
+                { name: "هاجر", scene: "scene-court", text: res, char: "hager", img: "hager.png" },
+                { name: "المتهم", scene: "scene-court", text: "هاهاها! مرافعة ذكية، لكن نسيتي أهم دليل.. التاريخ!", char: "accused", img: "accused.png" },
+                { name: "القاضي", scene: "scene-judge", text: "بما أن الساعة دقت 12.. المحكمة تعلن براءة المتهم!", char: "judge", img: "judge_hammer.png", hammer: true },
+                { name: "القاضي", scene: "scene-judge", text: "الكعكة كانت مفاجأة عيد ميلادك المستخبية! 🎂✨", char: "judge", img: "judge.png" }
+            );
+            showStep();
+        }
+
+        document.getElementById('next-btn').onclick = () => {
+            if (!musicStarted) { bgMusic.play(); bgMusic.volume = 0.2; musicStarted = true; }
+            if (document.getElementById('choices-container').style.display === 'flex') return;
+            showStep();
+        };
+    </script>
 </body>
 </html>
