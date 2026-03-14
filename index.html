@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>قضية هاجر | Ace Attorney Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap');
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: #000;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden; font-family: 'DotGothic16', sans-serif;
+            /* منع السحب والتحديد في الموبايل */
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        #game-container {
+            position: relative;
+            /* تغيير الأبعاد لتناسب الموبايل والديسكتوب تلقائياً */
+            width: 100vw;
+            height: 56.25vw; /* نسبة 16:9 */
+            max-width: 1000px;
+            max-height: 562px;
+            background-size: cover;
+            background-position: center;
+            image-rendering: pixelated;
+            border: 2px solid #333;
+            overflow: hidden;
+        }
+
+        /* تعديل للموبايل الطولي (Portrait) */
+        @media (max-aspect-ratio: 16/9) {
+            #game-container {
+                width: 100vw;
+                height: 56.25vw;
+            }
+        }
+
+        .scene-court { background-image: url('courtroom.png'); }
+        .scene-judge { background-image: url('judgedesk.png'); }
+
+        .character-sprite {
+            position: absolute;
+            z-index: 2;
+            image-rendering: pixelated;
+            display: none;
+            height: 70%; /* نسبة مئوية للطول ليتحرك مع الحاوية */
+            bottom: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        #hager {
+            height: 75%;
+            bottom: 10%;
+            left: 55%;
+        }
+
+        #judge {
+            height: 25%;
+            bottom: 43%;
+            left: 51%;
+        }
+
+        .judge-large {
+            height: 28% !important;
+            bottom: 42% !important;
+        }
+
+        .dialogue-box {
+            position: absolute;
+            bottom: 5px; left: 50%;
+            transform: translateX(-50%);
+            width: 95%; height: 30%;
+            background: rgba(0, 0, 20, 0.95);
+            border: 2px solid #fff;
+            padding: 10px 15px;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+
+        .name-label {
+            position: absolute;
+            top: -15px; right: 20px;
+            background: #d32f2f; color: white;
+            padding: 3px 15px; font-size: 16px;
+            border: 2px solid #fff;
+        }
+
+        .text-line {
+            color: white; 
+            font-size: clamp(16px, 4vw, 22px); /* خط مرن يصغر مع الشاشة */
+            line-height: 1.3;
+            text-align: right;
+            margin-top: 5px;
+        }
+
+        #objection-overlay {
+            position: absolute;
+            top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0);
+            font-size: clamp(40px, 15vw, 80px); 
+            color: red; font-weight: bold;
+            -webkit-text-stroke: 1px white; z-index: 100;
+            transition: transform 0.2s; pointer-events: none;
+        }
+
+        .shake { animation: shakeScreen 0.4s; }
+        @keyframes shakeScreen {
+            0%, 100% { transform: translate(0,0); }
+            25% { transform: translate(3px, 3px); }
+            50% { transform: translate(-3px, -3px); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container" class="scene-judge">
+    <div id="objection-overlay">OBJECTION!</div>
+    
+    <img src="hager.png" id="hager" class="character-sprite" alt="Hager">
+    <img src="judge.png" id="judge" class="character-sprite" alt="Judge">
+
+    <div class="dialogue-box" id="next-btn">
+        <div class="name-label" id="speaker-name">المحكمة</div>
+        <div class="text-line" id="dialogue-text">انقر لبدء المحاكمة...</div>
+    </div>
+</div>
+
+<audio id="bg-music" src="trial.mp3" loop></audio>
+<audio id="sfx-blip" src="blip.mp3"></audio>
+<audio id="sfx-slam" src="slam.mp3"></audio>
+
+<script>
+    const dialogue = [
+        { name: "القاضي", scene: "scene-judge", text: "هدوء في القاعة! لنبدأ جلسة 15 مارس.", image: "judge.png" },
+        { name: "القاضي", scene: "scene-judge", text: "التهمة الموجهة اليوم هي: كبرنا سنة كاملة!", image: "judge.png" },
+        { name: "هاجر", scene: "scene-court", text: "اعتراض يا سيدي القاضي!!", image: "hager_objection.png", isObjection: true },
+        { name: "هاجر", scene: "scene-court", text: "الوقت لم يمر هباءً، لقد تخرجنا وأصبحنا محامين، واليوم نحتفل أيضاً!", image: "hager.png" },
+        { name: "القاضي", scene: "scene-judge", text: "مرافعة مقنعة.. وبما أننا في رمضان، الحكم سيكون سعيداً.", image: "judge.png" },
+        { name: "القاضي", scene: "scene-judge", text: "حكمت المحكمة بالبراءة!", image: "judge_hammer.png", hammer: true },
+        { name: "هاجر", scene: "scene-court", text: "شكراً يا سيدي القاضي.. رمضان كريم للجميع! ✨", image: "hager.png" }
+    ];
+
+    let currentIdx = -1;
+    let isTyping = false;
+    let musicStarted = false;
+
+    const textTarget = document.getElementById('dialogue-text');
+    const nameTarget = document.getElementById('speaker-name');
+    const hagerImg = document.getElementById('hager');
+    const judgeImg = document.getElementById('judge');
+    const container = document.getElementById('game-container');
+    const objection = document.getElementById('objection-overlay');
+    
+    const bgMusic = document.getElementById('bg-music');
+    bgMusic.volume = 0.3;
+    const sfxBlip = document.getElementById('sfx-blip');
+    const sfxSlam = document.getElementById('sfx-slam');
+
+    function typeWriter(text) {
+        isTyping = true;
+        textTarget.innerHTML = "";
+        let i = 0;
+        let interval = setInterval(() => {
+            textTarget.innerHTML += text.charAt(i);
+            if (i % 2 === 0) {
+                sfxBlip.currentTime = 0;
+                sfxBlip.play().catch(e => {});
+            }
+            i++;
+            if (i >= text.length) {
+                clearInterval(interval);
+                isTyping = false;
+            }
+        }, 50);
+    }
+
+    document.getElementById('next-btn').addEventListener('click', () => {
+        if (!musicStarted) {
+            bgMusic.play().catch(e => console.log("الصوت مفعل"));
+            musicStarted = true;
+        }
+
+        if (isTyping) return;
+
+        currentIdx++;
+        if (currentIdx < dialogue.length) {
+            const step = dialogue[currentIdx];
+            container.className = step.scene;
+            
+            if (step.scene === "scene-court") {
+                hagerImg.style.display = "block";
+                judgeImg.style.display = "none";
+                hagerImg.src = step.image;
+            } else {
+                hagerImg.style.display = "none";
+                judgeImg.style.display = "block";
+                judgeImg.src = step.image;
+
+                if (step.image === "judge_hammer.png") {
+                    judgeImg.classList.add('judge-large');
+                } else {
+                    judgeImg.classList.remove('judge-large');
+                }
+            }
+
+            if (step.isObjection) {
+                objection.style.transform = "translate(-50%, -50%) scale(1.1)";
+                container.classList.add('shake');
+                setTimeout(() => {
+                    objection.style.transform = "translate(-50%, -50%) scale(0)";
+                    container.classList.remove('shake');
+                }, 600);
+            }
+
+            if (step.hammer) {
+                sfxSlam.play();
+                container.classList.add('shake');
+                setTimeout(() => container.classList.remove('shake'), 400);
+            }
+
+            nameTarget.innerText = step.name;
+            typeWriter(step.text);
+        } else {
+            textTarget.innerHTML = "انتهت الجلسة. كل سنة وانتي طيبة يا هاجر! ❤️";
+        }
+    });
+</script>
+
+</body>
+</html>
